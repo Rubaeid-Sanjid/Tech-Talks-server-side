@@ -56,7 +56,7 @@ async function run() {
     })
 
     app.get('/blogs/:id', async(req, res)=>{
-      const id = req.params;
+      const id = req.params.id;
       const query = {_id: new ObjectId(id)};
       const result = await blogCollections.findOne(query);
       res.send(result);
@@ -68,7 +68,12 @@ async function run() {
       res.send(result);
     })
 
-    // app.get()
+    app.get('/comments/:id', async(req, res)=>{
+      const curr_blog_id = req.params.id;
+      const query = {blog_Id: curr_blog_id}
+      const result = await commentCollections.find(query).toArray();
+      res.send(result);
+    })
 
     // await client.db("admin").command({ ping: 1 });
     // console.log("Pinged your deployment. You successfully connected to MongoDB!");
