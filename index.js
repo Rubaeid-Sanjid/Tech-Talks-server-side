@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const app = express();
 const port = process.env.PORT || 5000;
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 //middleware
 app.use(cors({
@@ -43,9 +43,20 @@ async function run() {
       .send({success: true});
     })  
 
-    app.post('/addBlog', async(req, res)=>{
+    app.post('/blogs', async(req, res)=>{
       const blog = req.body;
       const result = await blogCollections.insertOne(blog);
+      res.send(result);
+    })
+
+    app.get('/blogs', async(req, res)=>{
+      const result = await blogCollections.find().toArray();
+      res.send(result);
+    })
+    app.get('/blogs/:id', async(req, res)=>{
+      const id = req.params;
+      const query = {_id: new ObjectId(id)};
+      const result = await blogCollections.findOne(query);
       res.send(result);
     })
 
