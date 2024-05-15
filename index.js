@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
-// const cookieParser = require('cookie-parser');
+const cookieParser = require('cookie-parser');
 const app = express();
 const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion } = require('mongodb');
@@ -14,7 +14,7 @@ app.use(cors({
 }));
 
 app.use(express.json());
-// app.use(cookieParser());
+app.use(cookieParser());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.b8fibtq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -28,6 +28,7 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
+    const blogCollections = client.db('techBlogDB').collection('blogCollections');
 
     app.post('/jwt', async(req, res)=>{
       const user = req.body;
@@ -41,6 +42,12 @@ async function run() {
       })
       .send({success: true});
     })  
+
+    app.post('/addBlog', async(req, res)=>{
+      const blog = req.body;
+      const result = await blogCollections.insertOne(blog);
+      res.send(result);
+    })
 
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
