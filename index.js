@@ -29,6 +29,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     const blogCollections = client.db('techBlogDB').collection('blogCollections');
+    const commentCollections = client.db('techBlogDB').collection('commentCollections');
 
     app.post('/jwt', async(req, res)=>{
       const user = req.body;
@@ -61,8 +62,16 @@ async function run() {
       res.send(result);
     })
 
+    app.post('/comments', async(req, res)=>{
+      const comment = req.body;
+      const result = await commentCollections.insertOne(comment);
+      res.send(result);
+    })
+
+    // app.get()
+
     // await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    // console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     
   }
