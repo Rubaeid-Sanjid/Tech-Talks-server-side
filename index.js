@@ -28,6 +28,20 @@ const client = new MongoClient(uri, {
   },
 });
 
+const verifyToken = (req, res, next)=>{
+  const token = req?.cookies?.token;
+  if(!token){
+    return res.status(401).send({message: 'unauthorized access'})
+  }
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded)=>{
+    if(err){
+      return res.status(401).send({message: 'unauthorized access'})
+    }
+    req.user = decoded;
+    next();
+  })
+}
+
 async function run() {
   try {
     const blogCollections = client
@@ -46,12 +60,22 @@ async function run() {
       res
         .cookie("token", token, {
           httpOnly: true,
-          secure: false,
-          sameSite: "none",
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: process.env.NODE_ENV === 'production' ? "none" : "strict",
         })
         .send({ success: true });
     });
 
+    app.get('/logout', (req, res)=>{
+      res
+        .clearCookie("token", {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: process.env.NODE_ENV === 'production' ? "none" : "strict",
+          maxAge: 0,
+        })
+        .send({ success: true });
+    })
     app.post("/blogs", async (req, res) => {
       const blog = req.body;
       const result = await blogCollections.insertOne(blog);
@@ -88,7 +112,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/blogs/:id", async(req, res) => {
+    app.patch("/blogs/:id", verifyToken, async(req, res) => {
       const updated_blogInfo = req.body;
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
