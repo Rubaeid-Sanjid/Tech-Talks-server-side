@@ -28,33 +28,29 @@ const client = new MongoClient(uri, {
   },
 });
 
-const verifyToken = (req, res, next)=>{
+const verifyToken = (req, res, next) => {
   const token = req?.cookies?.token;
-  if(!token){
-    return res.status(401).send({message: 'unauthorized access'})
+  if (!token) {
+    return res.status(401).send({ message: 'unauthorized access' });
   }
-  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded)=>{
-    if(err){
-      return res.status(401).send({message: 'unauthorized access'})
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(403).send({ message: 'Forbidden' });
     }
     req.user = decoded;
     next();
-  })
-}
+  });
+};
 
 async function run() {
   try {
-    const blogCollections = client
-      .db("techBlogDB")
-      .collection("blogCollections");
-    const commentCollections = client
-      .db("techBlogDB")
-      .collection("commentCollections");
+    const blogCollections = client.db("techBlogDB").collection("blogCollections");
+    const commentCollections = client.db("techBlogDB").collection("commentCollections");
 
     app.post("/jwt", async (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: "1h",
+        expiresIn: "1d",
       });
 
       res
@@ -66,7 +62,7 @@ async function run() {
         .send({ success: true });
     });
 
-    app.get('/logout', (req, res)=>{
+    app.get('/logout', (req, res) => {
       res
         .clearCookie("token", {
           httpOnly: true,
@@ -75,7 +71,8 @@ async function run() {
           maxAge: 0,
         })
         .send({ success: true });
-    })
+    });
+
     app.post("/blogs", async (req, res) => {
       const blog = req.body;
       const result = await blogCollections.insertOne(blog);
@@ -83,8 +80,36 @@ async function run() {
     });
 
     app.get("/blogs", async (req, res) => {
-      const result = await blogCollections.find().toArray();
-      res.send(result);
+      const page = parseInt(req.query.page) || 1;
+      const size = parseInt(req.query.size) || 10;
+      const filter = req.query.filter || "";
+      const search = req.query.search || "";
+      
+      const query = {};
+
+      if (filter) {
+        query.category = filter;
+      }
+
+      if (search) {
+        query.$or = [
+          { title: { $regex: search, $options: "i" } },
+          { short_description: { $regex: search, $options: "i" } },
+          { long_description: { $regex: search, $options: "i" } },
+        ];
+      }
+
+      const totalCount = await blogCollections.countDocuments(query);
+      const blogs = await blogCollections
+        .find(query)
+        .skip((page - 1) * size)
+        .limit(size)
+        .toArray();
+
+      res.send({
+        blogs,
+        count: totalCount,
+      });
     });
 
     app.get("/blogs/:id", async (req, res) => {
@@ -112,7 +137,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/blogs/:id", verifyToken, async(req, res) => {
+    app.patch("/blogs/:id", verifyToken, async (req, res) => {
       const updated_blogInfo = req.body;
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
