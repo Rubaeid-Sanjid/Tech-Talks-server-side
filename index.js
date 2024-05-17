@@ -10,7 +10,11 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 //middleware
 app.use(
   cors({
-    origin: ["http://localhost:5173"],
+    origin: [
+      "http://localhost:5173",
+      "https://tech-talks-auth.web.app",
+      "https://tech-talks-auth.firebaseapp.com",
+    ],
     credentials: true,
   })
 );
@@ -31,11 +35,11 @@ const client = new MongoClient(uri, {
 const verifyToken = (req, res, next) => {
   const token = req?.cookies?.token;
   if (!token) {
-    return res.status(401).send({ message: 'unauthorized access' });
+    return res.status(401).send({ message: "unauthorized access" });
   }
   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
     if (err) {
-      return res.status(403).send({ message: 'Forbidden' });
+      return res.status(403).send({ message: "Forbidden" });
     }
     req.user = decoded;
     next();
@@ -44,8 +48,12 @@ const verifyToken = (req, res, next) => {
 
 async function run() {
   try {
-    const blogCollections = client.db("techBlogDB").collection("blogCollections");
-    const commentCollections = client.db("techBlogDB").collection("commentCollections");
+    const blogCollections = client
+      .db("techBlogDB")
+      .collection("blogCollections");
+    const commentCollections = client
+      .db("techBlogDB")
+      .collection("commentCollections");
 
     app.post("/jwt", async (req, res) => {
       const user = req.body;
@@ -56,18 +64,18 @@ async function run() {
       res
         .cookie("token", token, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: process.env.NODE_ENV === 'production' ? "none" : "strict",
+          secure: process.env.NODE_ENV === "production" ? true : false,
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
         })
         .send({ success: true });
     });
 
-    app.get('/logout', (req, res) => {
+    app.get("/logout", (req, res) => {
       res
         .clearCookie("token", {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: process.env.NODE_ENV === 'production' ? "none" : "strict",
+          secure: process.env.NODE_ENV === "production" ? true : false,
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
           maxAge: 0,
         })
         .send({ success: true });
@@ -84,7 +92,7 @@ async function run() {
       const size = parseInt(req.query.size) || 10;
       const filter = req.query.filter || "";
       const search = req.query.search || "";
-      
+
       const query = {};
 
       if (filter) {
@@ -151,7 +159,11 @@ async function run() {
           long_description: updated_blogInfo.updated_long_description,
         },
       };
-      const result = await blogCollections.updateOne(filter, updated_blogInfoDoc, option);
+      const result = await blogCollections.updateOne(
+        filter,
+        updated_blogInfoDoc,
+        option
+      );
       res.send(result);
     });
   } finally {
